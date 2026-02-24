@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import axios from '../api'
 import toast from 'react-hot-toast'
 
 const CATEGORIES = ['Career', 'Health', 'Education', 'Finance', 'Personal', 'Creative', 'Relationships']

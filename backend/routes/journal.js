@@ -1,46 +1,39 @@
-const router = require('express').Router()
-const auth = require('../middleware/auth')
-const { journal } = require('../db/db')
+const router = require('express').Router();
+const auth = require('../middleware/auth');
+const Journal = require('../models/Journal');
 
 router.get('/', auth, async (req, res) => {
-    try {
-        const all = await journal.find({ userId: req.user.id })
-        res.json(all.sort((a, b) => new Date(b.date) - new Date(a.date)))
-    } catch (err) { res.status(500).json({ message: err.message }) }
-})
+    try { res.json(await Journal.find({ user: req.user.id }).sort({ date: -1 })); }
+    catch (err) { res.status(500).json({ message: err.message }); }
+});
 
 router.post('/', auth, async (req, res) => {
     try {
-        const existing = await journal.findOne({ userId: req.user.id, date: req.body.date })
+        // Upsert — one entry per day
+        const existing = await Journal.findOne({ user: req.user.id, date: req.body.date });
         if (existing) {
-            await journal.update({ _id: existing._id }, { $set: req.body })
-            return res.json(await journal.findOne({ _id: existing._id }))
+            const updated = await Journal.findByIdAndUpdate(existing._id, req.body, { new: true });
+            return res.json(updated);
         }
-        const entry = await journal.insert({ ...req.body, userId: req.user.id, createdAt: new Date().toISOString() })
-        res.status(201).json(entry)
-    } catch (err) { res.status(500).json({ message: err.message }) }
-})
+        res.status(201).json(await Journal.create({ ...req.body, user: req.user.id }));
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
 
 router.put('/:id', auth, async (req, res) => {
-    try {
-        await journal.update({ _id: req.params.id, userId: req.user.id }, { $set: req.body })
-        res.json(await journal.findOne({ _id: req.params.id }))
-    } catch (err) { res.status(500).json({ message: err.message }) }
-})
+    try { res.json(await Journal.findOneAndUpdate({ _id: req.params.id, user: req.user.id }, req.body, { new: true })); }
+    catch (err) { res.status(500).json({ message: err.message }); }
+});
 
 router.delete('/:id', auth, async (req, res) => {
-    try {
-        await journal.remove({ _id: req.params.id, userId: req.user.id })
-        res.json({ message: 'Deleted' })
-    } catch (err) { res.status(500).json({ message: err.message }) }
-})
+    try { await Journal.findOneAndDelete({ _id: req.params.id, user: req.user.id }); res.json({ message: 'Deleted' }); }
+    catch (err) { res.status(500).json({ message: err.message }); }
+});
 
 router.get('/mood-history', auth, async (req, res) => {
     try {
-        const all = await journal.find({ userId: req.user.id })
-        const sorted = all.sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-30)
-        res.json(sorted.map(e => ({ date: e.date, mood: e.mood, moodLabel: e.moodLabel })))
-    } catch (err) { res.status(500).json({ message: err.message }) }
-})
+        const entries = await Journal.find({ user: req.user.id }).select('date mood moodLabel').sort({ date: 1 }).limit(30);
+        res.json(entries);
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
 
-module.exports = router
+module.exports = router;
