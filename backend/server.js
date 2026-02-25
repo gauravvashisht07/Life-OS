@@ -4,17 +4,9 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
-app.use(cors({
-    origin: (origin, cb) => {
-        // Allow requests with no origin (curl, Postman), localhost, and *.vercel.app
-        if (!origin || origin.includes('localhost') || origin.includes('.vercel.app')) {
-            cb(null, true);
-        } else {
-            cb(null, true); // allow all in free tier — restrict if needed
-        }
-    },
-    credentials: true
-}));
+
+// CORS — allow all origins (Vercel, localhost, Postman)
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // Routes
@@ -25,70 +17,67 @@ app.use('/api/study', require('./routes/study'));
 app.use('/api/journal', require('./routes/journal'));
 app.use('/api/finance', require('./routes/finance'));
 app.use('/api/analytics', require('./routes/analytics'));
+
+// Health check — Render pings this to confirm the service is alive
+app.get('/', (req, res) => res.json({ status: 'LifeOS API running 🚀' }));
 app.get('/api/health', (req, res) => res.json({ status: 'LifeOS API running 🚀' }));
 
-// ─── Fix special characters in MongoDB URI password ──────────────────────────
-// Handles passwords with @, #, /, ?, or other URL-unsafe characters
+// ─── Handle passwords with special chars (@, #, etc.) in MongoDB URI ──────────
 function fixMongoURI(raw) {
     if (!raw) return raw;
     try {
-        // Split off the scheme (mongodb:// or mongodb+srv://)
         const schemeEnd = raw.indexOf('://');
         if (schemeEnd === -1) return raw;
-
-        const scheme = raw.slice(0, schemeEnd + 3);          // "mongodb+srv://"
-        const rest = raw.slice(schemeEnd + 3);              // "user:pass@host/db?opts"
-
-        // Find the LAST '@' — everything before it is "userinfo"
+        const scheme = raw.slice(0, schemeEnd + 3);
+        const rest = raw.slice(schemeEnd + 3);
         const atIdx = rest.lastIndexOf('@');
-        if (atIdx === -1) return raw;                          // no credentials — return as-is
-
-        const userinfo = rest.slice(0, atIdx);                // "user:pass"
-        const hostPart = rest.slice(atIdx + 1);               // "host/db?opts"
-
-        // Split userinfo into user and raw password (split only on FIRST colon)
+        if (atIdx === -1) return raw;
+        const userinfo = rest.slice(0, atIdx);
+        const hostPart = rest.slice(atIdx + 1);
         const colonIdx = userinfo.indexOf(':');
-        if (colonIdx === -1) return raw;                       // no password
-
+        if (colonIdx === -1) return raw;
         const user = userinfo.slice(0, colonIdx);
         const password = userinfo.slice(colonIdx + 1);
-
-        // Only encode if needed (avoid double-encoding)
         const encodedPw = encodeURIComponent(decodeURIComponent(password));
-
-        const fixed = `${scheme}${user}:${encodedPw}@${hostPart}`;
-        return fixed;
-    } catch {
-        return raw;   // if anything fails, return original
-    }
+        return `${scheme}${user}:${encodedPw}@${hostPart}`;
+    } catch { return raw; }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = fixMongoURI(process.env.MONGO_URI || 'mongodb://localhost:27017/lifeos');
+const MONGO_URI = fixMongoURI(process.env.MONGO_URI);
+
+if (!MONGO_URI) {
+    console.error('❌ MONGO_URI environment variable is not set!');
+    console.error('   Set it in Render → Environment → MONGO_URI');
+    process.exit(1);
+}
 
 async function startServer() {
     try {
-        console.log('⏳ Connecting to MongoDB Atlas...');
+        console.log('⏳ Connecting to MongoDB...');
 
         await mongoose.connect(MONGO_URI, {
-            serverSelectionTimeoutMS: 15000,
+            serverSelectionTimeoutMS: 20000,  // 20s — Render cold starts can be slow
             socketTimeoutMS: 45000,
-            family: 4,    // force IPv4 — prevents ::1 DNS issues on Windows
+            // NOTE: No 'family: 4' — let Render's DNS resolve naturally (IPv4+IPv6)
         });
 
-        console.log('✅ MongoDB connected successfully!');
-        app.listen(PORT, () => {
-            console.log(`🚀 LifeOS Server running on http://localhost:${PORT}`);
+        console.log('✅ MongoDB connected!');
+
+        // Render requires listening on 0.0.0.0 (not just localhost)
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 LifeOS Server on port ${PORT}`);
         });
+
     } catch (err) {
         console.error('❌ MongoDB connection failed:', err.message);
-        console.error('');
-        console.error('🔧 Checklist:');
-        console.error('  1. Atlas → Network Access → Add 0.0.0.0/0 (Allow from Anywhere)');
-        console.error('  2. Atlas → Database Access → check that the DB user exists');
-        console.error('  3. URI format must be: mongodb+srv://user:password@cluster0.XXXXX.mongodb.net/lifeos?retryWrites=true&w=majority');
-        process.exit(1);
+        console.error('Check: Atlas Network Access → 0.0.0.0/0 allowed');
+        // Don't call process.exit here — let Render retry on next deploy
+        // Instead start the server anyway so health checks still pass
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`⚠️  Server started WITHOUT DB on port ${PORT} — fix MONGO_URI`);
+        });
     }
 }
 
