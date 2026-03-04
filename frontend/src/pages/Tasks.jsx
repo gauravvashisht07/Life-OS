@@ -12,7 +12,6 @@ const PRIORITY_COLOR = { high: 'var(--red)', medium: 'var(--yellow)', low: 'var(
 const PRIORITY_ICON = { high: '🔴', medium: '🟡', low: '🟢' }
 const STATUS_ICON = { pending: '⬜', 'in-progress': '🔵', completed: '✅', skipped: '⏭️' }
 const CAT_ICON = { Study: '📚', Coding: '💻', Health: '🏃', Personal: '👤', Work: '💼', Other: '📌' }
-
 const tooltipStyle = { background: '#1e1e2e', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text)' }
 
 function fmtTime(sec) {
@@ -30,8 +29,8 @@ export default function Tasks() {
     const [form, setForm] = useState(blank)
     const [subtaskInput, setSubtaskInput] = useState('')
     const [filter, setFilter] = useState({ status: '', category: '', priority: '' })
-    const [view, setView] = useState('tasks') // tasks | analytics
-    const [activeTimer, setActiveTimer] = useState(null) // taskId
+    const [view, setView] = useState('tasks')
+    const [activeTimer, setActiveTimer] = useState(null)
     const [timerSec, setTimerSec] = useState(0)
     const [dragId, setDragId] = useState(null)
     const timerRef = useRef(null)
@@ -42,92 +41,56 @@ export default function Tasks() {
     }
     useEffect(() => { fetchAll().catch(console.error) }, [])
 
-    // Timer logic
     useEffect(() => {
-        if (activeTimer) {
-            timerRef.current = setInterval(() => setTimerSec(s => s + 1), 1000)
-        } else {
-            clearInterval(timerRef.current)
-        }
+        if (activeTimer) { timerRef.current = setInterval(() => setTimerSec(s => s + 1), 1000) }
+        else { clearInterval(timerRef.current) }
         return () => clearInterval(timerRef.current)
     }, [activeTimer])
 
     const startTimer = (id) => { setActiveTimer(id); setTimerSec(0) }
     const stopTimer = async () => {
         clearInterval(timerRef.current)
-        if (timerSec > 0) {
-            await axios.patch(`/api/tasks/${activeTimer}/timer`, { seconds: timerSec })
-            toast.success(`⏱️ +${fmtTime(timerSec)} logged`)
-            fetchAll()
-        }
+        if (timerSec > 0) { await axios.patch(`/api/tasks/${activeTimer}/timer`, { seconds: timerSec }); toast.success(`⏱️ +${fmtTime(timerSec)} logged`); fetchAll() }
         setActiveTimer(null); setTimerSec(0)
     }
 
     const openCreate = () => { setForm(blank); setEditTask(null); setSubtaskInput(''); setShowModal(true) }
-    const openEdit = (t) => {
-        setForm({ ...t, recurringDays: t.recurringDays || [], subtasks: t.subtasks || [] })
-        setEditTask(t._id); setSubtaskInput(''); setShowModal(true)
-    }
+    const openEdit = (t) => { setForm({ ...t, recurringDays: t.recurringDays || [], subtasks: t.subtasks || [] }); setEditTask(t._id); setSubtaskInput(''); setShowModal(true) }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         try {
-            if (editTask) { await axios.put(`/api/tasks/${editTask}`, form) }
-            else { await axios.post('/api/tasks', form) }
+            if (editTask) await axios.put(`/api/tasks/${editTask}`, form)
+            else await axios.post('/api/tasks', form)
             toast.success(editTask ? '✏️ Task updated!' : '✅ Task created!')
             setShowModal(false); fetchAll()
         } catch { toast.error('Failed to save task') }
     }
 
-    const setStatus = async (id, status) => {
-        await axios.put(`/api/tasks/${id}`, { status })
-        fetchAll()
-    }
-
-    const toggleFocus = async (t) => {
-        await axios.put(`/api/tasks/${t._id}`, { todaysFocus: !t.todaysFocus })
-        fetchAll()
-    }
-
-    const deleteTask = async (id) => {
-        await axios.delete(`/api/tasks/${id}`)
-        toast.success('🗑️ Deleted'); fetchAll()
-    }
-
+    const setStatus = async (id, status) => { await axios.put(`/api/tasks/${id}`, { status }); fetchAll() }
+    const toggleFocus = async (t) => { await axios.put(`/api/tasks/${t._id}`, { todaysFocus: !t.todaysFocus }); fetchAll() }
+    const deleteTask = async (id) => { await axios.delete(`/api/tasks/${id}`); toast.success('🗑️ Deleted'); fetchAll() }
     const toggleSubtask = async (task, idx) => {
         const subtasks = task.subtasks.map((s, i) => i === idx ? { ...s, done: !s.done } : s)
         await axios.put(`/api/tasks/${task._id}`, { subtasks }); fetchAll()
     }
-
-    const addSubtask = () => {
-        if (!subtaskInput.trim()) return
-        setForm(f => ({ ...f, subtasks: [...(f.subtasks || []), { title: subtaskInput.trim(), done: false }] }))
-        setSubtaskInput('')
-    }
+    const addSubtask = () => { if (!subtaskInput.trim()) return; setForm(f => ({ ...f, subtasks: [...(f.subtasks || []), { title: subtaskInput.trim(), done: false }] })); setSubtaskInput('') }
     const removeSubtask = (idx) => setForm(f => ({ ...f, subtasks: f.subtasks.filter((_, i) => i !== idx) }))
 
-    // Drag-and-drop
     const onDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = 'move' }
     const onDrop = async (e, targetId) => {
         e.preventDefault()
         if (dragId === targetId) return
         const ids = tasks.map(t => t._id)
-        const from = ids.indexOf(dragId), to = ids.indexOf(targetId)
-        const reordered = [...ids]
-        reordered.splice(from, 1); reordered.splice(to, 0, dragId)
-        const newTasks = reordered.map(id => tasks.find(t => t._id === id))
-        setTasks(newTasks)
-        await axios.patch('/api/tasks/reorder', { orderedIds: reordered })
-        setDragId(null)
+        const reordered = [...ids]; reordered.splice(reordered.indexOf(dragId), 1); reordered.splice(reordered.indexOf(targetId), 0, dragId)
+        setTasks(reordered.map(id => tasks.find(t => t._id === id)))
+        await axios.patch('/api/tasks/reorder', { orderedIds: reordered }); setDragId(null)
     }
 
-    const filtered = tasks.filter(t =>
-        (!filter.status || t.status === filter.status) &&
-        (!filter.category || t.category === filter.category) &&
-        (!filter.priority || t.priority === filter.priority)
-    )
+    const filtered = tasks.filter(t => (!filter.status || t.status === filter.status) && (!filter.category || t.category === filter.category) && (!filter.priority || t.priority === filter.priority))
     const focusTasks = tasks.filter(t => t.todaysFocus && t.status !== 'completed')
     const today = new Date().toISOString().split('T')[0]
+    const sf = v => setForm(f => ({ ...f, ...v }))
 
     return (
         <div className="page fade-in">
@@ -144,15 +107,15 @@ export default function Tasks() {
                 </div>
             </div>
 
-            {/* Active Timer Banner */}
+            {/* Timer Banner */}
             {activeTimer && (
                 <div className="card" style={{ background: 'rgba(137,180,250,0.1)', border: '1px solid var(--accent)', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--red)', animation: 'pulse 1s infinite' }} />
-                        <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700 }}>Timer running</span>
+                        <span style={{ fontWeight: 700 }}>Timer running</span>
                         <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>{fmtTime(timerSec)}</span>
                     </div>
-                    <button className="btn btn-sm btn-danger" onClick={stopTimer}>⏹ Stop & Save</button>
+                    <button className="btn btn-sm btn-danger" onClick={stopTimer}>⏹ Stop &amp; Save</button>
                 </div>
             )}
 
@@ -161,13 +124,11 @@ export default function Tasks() {
                     {/* Today's Focus */}
                     {focusTasks.length > 0 && (
                         <div className="card" style={{ marginBottom: '20px', border: '1px solid rgba(249,226,175,0.3)', background: 'rgba(249,226,175,0.05)' }}>
-                            <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '0.95rem', marginBottom: '12px', color: 'var(--yellow)' }}>⭐ Today's Focus</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <h3 style={{ fontSize: '0.95rem', marginBottom: '10px', color: 'var(--yellow)' }}>⭐ Today's Focus</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 {focusTasks.map(t => (
                                     <div key={t._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'rgba(49,50,68,0.5)', borderRadius: '8px' }}>
-                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }} onClick={() => setStatus(t._id, t.status === 'completed' ? 'pending' : 'completed')}>
-                                            {STATUS_ICON[t.status]}
-                                        </button>
+                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }} onClick={() => setStatus(t._id, t.status === 'completed' ? 'pending' : 'completed')}>{STATUS_ICON[t.status]}</button>
                                         <span style={{ flex: 1, fontWeight: 600, fontSize: '0.875rem', textDecoration: t.status === 'completed' ? 'line-through' : 'none', color: t.status === 'completed' ? 'var(--text-muted)' : 'var(--text)' }}>{t.title}</span>
                                         <span className="badge badge-yellow">{CAT_ICON[t.category]} {t.category}</span>
                                         {PRIORITY_ICON[t.priority]}
@@ -179,21 +140,13 @@ export default function Tasks() {
 
                     {/* Filters */}
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                        <select className="form-control" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.8rem' }}
-                            value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}>
-                            <option value="">All Status</option>
-                            {STATUSES.map(s => <option key={s} value={s}>{STATUS_ICON[s]} {s}</option>)}
-                        </select>
-                        <select className="form-control" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.8rem' }}
-                            value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}>
-                            <option value="">All Categories</option>
-                            {CATEGORIES.map(c => <option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}
-                        </select>
-                        <select className="form-control" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.8rem' }}
-                            value={filter.priority} onChange={e => setFilter(f => ({ ...f, priority: e.target.value }))}>
-                            <option value="">All Priorities</option>
-                            {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_ICON[p]} {p}</option>)}
-                        </select>
+                        {[['status', STATUSES, STATUS_ICON], ['category', CATEGORIES, CAT_ICON], ['priority', PRIORITIES, PRIORITY_ICON]].map(([key, opts, icons]) => (
+                            <select key={key} className="form-control" style={{ width: 'auto', padding: '6px 10px', fontSize: '0.8rem' }}
+                                value={filter[key]} onChange={e => setFilter(f => ({ ...f, [key]: e.target.value }))}>
+                                <option value="">All {key.charAt(0).toUpperCase() + key.slice(1)}</option>
+                                {opts.map(o => <option key={o} value={o}>{icons[o]} {o}</option>)}
+                            </select>
+                        ))}
                         {(filter.status || filter.category || filter.priority) && (
                             <button className="btn btn-sm btn-secondary" onClick={() => setFilter({ status: '', category: '', priority: '' })}>✕ Clear</button>
                         )}
@@ -202,78 +155,61 @@ export default function Tasks() {
 
                     {/* Task List */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {filtered.length === 0 ? (
-                            <div className="card empty-state"><div className="emoji">📋</div><h3>No tasks yet</h3><p>Create your first task to get started!</p></div>
-                        ) : filtered.map(task => {
-                            const isOverdue = task.deadline && task.deadline < today && task.status !== 'completed'
-                            const doneSubtasks = (task.subtasks || []).filter(s => s.done).length
-                            return (
-                                <div key={task._id} className="card" draggable
-                                    onDragStart={e => onDragStart(e, task._id)}
-                                    onDragOver={e => e.preventDefault()}
-                                    onDrop={e => onDrop(e, task._id)}
-                                    style={{ cursor: 'grab', border: dragId === task._id ? '1px solid var(--accent)' : isOverdue ? '1px solid var(--red)' : task.status === 'completed' ? '1px solid rgba(166,227,161,0.2)' : '1px solid var(--border)', opacity: task.status === 'completed' ? 0.7 : 1, transition: 'all 0.2s' }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                                        {/* Status toggle */}
-                                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, marginTop: '2px' }}
-                                            onClick={() => { const next = { pending: 'in-progress', 'in-progress': 'completed', completed: 'pending', skipped: 'pending' }; setStatus(task._id, next[task.status]) }}>
-                                            {STATUS_ICON[task.status]}
-                                        </button>
-
-                                        {/* Title & meta */}
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                                                <span style={{ fontWeight: 600, fontSize: '0.9rem', textDecoration: task.status === 'completed' ? 'line-through' : 'none', color: task.status === 'completed' ? 'var(--text-muted)' : 'var(--text)' }}>{task.title}</span>
-                                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: PRIORITY_COLOR[task.priority], flexShrink: 0 }} title={task.priority + ' priority'} />
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: task.description ? '6px' : 0 }}>
-                                                <span className="badge badge-blue">{CAT_ICON[task.category]} {task.category}</span>
-                                                {task.deadline && <span className={`badge ${isOverdue ? 'badge-red' : 'badge-yellow'}`}>📅 {task.deadline}{isOverdue ? ' ⚠️' : ''}</span>}
-                                                {task.isRecurring && <span className="badge badge-purple">🔁 Recurring</span>}
-                                                {task.todaysFocus && <span className="badge badge-yellow">⭐ Focus</span>}
-                                                {task.timeSpent > 0 && <span className="badge badge-green">⏱️ {fmtTime(task.timeSpent)}</span>}
-                                            </div>
-                                            {task.description && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0' }}>{task.description}</p>}
-                                            {/* Subtasks */}
-                                            {task.subtasks?.length > 0 && (
-                                                <div style={{ marginTop: '8px' }}>
-                                                    <div style={{ height: '4px', background: 'rgba(49,50,68,0.6)', borderRadius: '2px', marginBottom: '6px' }}>
-                                                        <div style={{ height: '100%', width: `${(doneSubtasks / task.subtasks.length) * 100}%`, background: 'var(--green)', borderRadius: '2px', transition: 'width 0.4s' }} />
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {filtered.length === 0
+                            ? <div className="card empty-state"><div className="emoji">📋</div><h3>No tasks yet</h3><p>Create your first task!</p></div>
+                            : filtered.map(task => {
+                                const isOverdue = task.deadline && task.deadline < today && task.status !== 'completed'
+                                const doneSubtasks = (task.subtasks || []).filter(s => s.done).length
+                                const nextStatus = { pending: 'in-progress', 'in-progress': 'completed', completed: 'pending', skipped: 'pending' }
+                                return (
+                                    <div key={task._id} className="card" draggable
+                                        onDragStart={e => onDragStart(e, task._id)} onDragOver={e => e.preventDefault()} onDrop={e => onDrop(e, task._id)}
+                                        style={{ cursor: 'grab', border: dragId === task._id ? '1px solid var(--accent)' : isOverdue ? '1px solid var(--red)' : task.status === 'completed' ? '1px solid rgba(166,227,161,0.2)' : '1px solid var(--border)', opacity: task.status === 'completed' ? 0.7 : 1, transition: 'all 0.2s' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, marginTop: '2px' }} onClick={() => setStatus(task._id, nextStatus[task.status])}>{STATUS_ICON[task.status]}</button>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', textDecoration: task.status === 'completed' ? 'line-through' : 'none', color: task.status === 'completed' ? 'var(--text-muted)' : 'var(--text)' }}>{task.title}</span>
+                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: PRIORITY_COLOR[task.priority], flexShrink: 0 }} />
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                                    <span className="badge badge-blue">{CAT_ICON[task.category]} {task.category}</span>
+                                                    {task.deadline && <span className={`badge ${isOverdue ? 'badge-red' : 'badge-yellow'}`}>📅 {task.deadline}</span>}
+                                                    {task.isRecurring && <span className="badge badge-purple">🔁</span>}
+                                                    {task.todaysFocus && <span className="badge badge-yellow">⭐</span>}
+                                                    {task.timeSpent > 0 && <span className="badge badge-green">⏱️ {fmtTime(task.timeSpent)}</span>}
+                                                </div>
+                                                {task.description && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{task.description}</p>}
+                                                {task.subtasks?.length > 0 && (
+                                                    <div style={{ marginTop: '8px' }}>
+                                                        <div style={{ height: '3px', background: 'rgba(49,50,68,0.6)', borderRadius: '2px', marginBottom: '5px' }}>
+                                                            <div style={{ height: '100%', width: `${(doneSubtasks / task.subtasks.length) * 100}%`, background: 'var(--green)', borderRadius: '2px', transition: 'width 0.4s' }} />
+                                                        </div>
                                                         {task.subtasks.map((s, i) => (
-                                                            <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', color: s.done ? 'var(--text-muted)' : 'var(--text)' }}>
+                                                            <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.78rem', color: s.done ? 'var(--text-muted)' : 'var(--text)', marginBottom: '2px' }}>
                                                                 <input type="checkbox" checked={s.done} onChange={() => toggleSubtask(task, i)} />
                                                                 <span style={{ textDecoration: s.done ? 'line-through' : 'none' }}>{s.title}</span>
                                                             </label>
                                                         ))}
                                                     </div>
-                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{doneSubtasks}/{task.subtasks.length} done</div>
-                                                </div>
-                                            )}
-                                            {task.notes && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', fontStyle: 'italic' }}>📝 {task.notes}</p>}
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                                            <button className="btn-icon" title="Toggle focus" onClick={() => toggleFocus(task)} style={{ color: task.todaysFocus ? 'var(--yellow)' : 'var(--text-muted)' }}>⭐</button>
-                                            <button className="btn-icon" title={activeTimer === task._id ? 'Stop timer' : 'Start timer'}
-                                                onClick={() => activeTimer === task._id ? stopTimer() : startTimer(task._id)}
-                                                style={{ color: activeTimer === task._id ? 'var(--red)' : 'var(--text-muted)' }}>
-                                                {activeTimer === task._id ? '⏹' : '▶️'}
-                                            </button>
-                                            <button className="btn-icon" onClick={() => openEdit(task)}>✏️</button>
-                                            <button className="btn-icon" onClick={() => deleteTask(task._id)}>🗑️</button>
+                                                )}
+                                                {task.notes && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>📝 {task.notes}</p>}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                                <button className="btn-icon" onClick={() => toggleFocus(task)} style={{ color: task.todaysFocus ? 'var(--yellow)' : 'var(--text-muted)' }}>⭐</button>
+                                                <button className="btn-icon" onClick={() => activeTimer === task._id ? stopTimer() : startTimer(task._id)} style={{ color: activeTimer === task._id ? 'var(--red)' : 'var(--text-muted)' }}>{activeTimer === task._id ? '⏹' : '▶️'}</button>
+                                                <button className="btn-icon" onClick={() => openEdit(task)}>✏️</button>
+                                                <button className="btn-icon" onClick={() => deleteTask(task._id)}>🗑️</button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
                     </div>
                 </>
             )}
 
-            {/* Analytics View */}
+            {/* Analytics */}
             {view === 'analytics' && stats && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div className="stats-grid">
@@ -292,10 +228,8 @@ export default function Tasks() {
                             </div>
                         ))}
                     </div>
-
-                    {/* Weekly chart */}
                     <div className="card">
-                        <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '0.95rem', marginBottom: '16px' }}>📈 Weekly Performance</h3>
+                        <h3 style={{ fontSize: '0.95rem', marginBottom: '16px' }}>📈 Weekly Performance</h3>
                         <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={stats.weekly}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(113,121,153,0.15)" />
@@ -307,10 +241,8 @@ export default function Tasks() {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-
-                    {/* Category breakdown */}
                     <div className="card">
-                        <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '0.95rem', marginBottom: '16px' }}>📂 By Category</h3>
+                        <h3 style={{ fontSize: '0.95rem', marginBottom: '16px' }}>📂 By Category</h3>
                         {Object.entries(stats.byCategory).length === 0
                             ? <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No tasks yet</p>
                             : Object.entries(stats.byCategory).map(([cat, d]) => (
@@ -319,104 +251,112 @@ export default function Tasks() {
                                         <span>{CAT_ICON[cat]} {cat}</span>
                                         <span style={{ color: 'var(--text-muted)' }}>{d.done}/{d.total}</span>
                                     </div>
-                                    <div className="progress-bar">
-                                        <div className="progress-fill" style={{ width: `${d.total ? (d.done / d.total) * 100 : 0}%`, background: 'var(--gradient-2)' }} />
-                                    </div>
+                                    <div className="progress-bar"><div className="progress-fill" style={{ width: `${d.total ? (d.done / d.total) * 100 : 0}%`, background: 'var(--gradient-2)' }} /></div>
                                 </div>
                             ))}
                     </div>
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
+            {/* ── Modal ─────────────────────────────────────────────────────── */}
             {showModal && (
                 <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="modal" style={{ maxWidth: '540px' }}>
+                    <div className="modal">
                         <div className="modal-header">
                             <h3>{editTask ? '✏️ Edit Task' : '✅ New Task'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
                         <form onSubmit={handleSubmit}>
+                            {/* Title */}
                             <div className="form-group">
                                 <label>Title *</label>
-                                <input className="form-control" placeholder="Task title..." value={form.title}
-                                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
+                                <input className="form-control" placeholder="Task title..." value={form.title} onChange={e => sf({ title: e.target.value })} required />
                             </div>
+
+                            {/* Category + Priority */}
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Category</label>
-                                    <select className="form-control" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                                    <select className="form-control" value={form.category} onChange={e => sf({ category: e.target.value })}>
                                         {CATEGORIES.map(c => <option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Priority</label>
-                                    <select className="form-control" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+                                    <select className="form-control" value={form.priority} onChange={e => sf({ priority: e.target.value })}>
                                         {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_ICON[p]} {p}</option>)}
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Status + Deadline */}
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Status</label>
-                                    <select className="form-control" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                                    <select className="form-control" value={form.status} onChange={e => sf({ status: e.target.value })}>
                                         {STATUSES.map(s => <option key={s} value={s}>{STATUS_ICON[s]} {s}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Deadline</label>
-                                    <input type="date" className="form-control" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+                                    <input type="date" className="form-control" value={form.deadline} onChange={e => sf({ deadline: e.target.value })} />
                                 </div>
                             </div>
+
+                            {/* Description */}
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea className="form-control" rows={2} placeholder="Optional details..." value={form.description}
-                                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                                <input className="form-control" placeholder="Optional details..." value={form.description} onChange={e => sf({ description: e.target.value })} />
                             </div>
 
                             {/* Subtasks */}
                             <div className="form-group">
                                 <label>Subtasks</label>
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                    <input className="form-control" placeholder="Add subtask..." value={subtaskInput}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input className="form-control" placeholder="Add subtask & press Enter..." value={subtaskInput}
                                         onChange={e => setSubtaskInput(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
-                                    <button type="button" className="btn btn-sm btn-secondary" onClick={addSubtask}>+</button>
+                                    <button type="button" className="btn btn-sm btn-secondary" onClick={addSubtask} style={{ flexShrink: 0 }}>+</button>
                                 </div>
-                                {(form.subtasks || []).map((s, i) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: 'rgba(49,50,68,0.5)', borderRadius: '6px', marginBottom: '4px' }}>
-                                        <span style={{ flex: 1, fontSize: '0.8rem' }}>• {s.title}</span>
-                                        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.9rem' }} onClick={() => removeSubtask(i)}>×</button>
+                                {(form.subtasks || []).length > 0 && (
+                                    <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        {(form.subtasks || []).map((s, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', background: 'rgba(49,50,68,0.5)', borderRadius: '6px' }}>
+                                                <span style={{ flex: 1, fontSize: '0.78rem' }}>• {s.title}</span>
+                                                <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '1rem' }} onClick={() => removeSubtask(i)}>×</button>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
                             </div>
 
+                            {/* Notes */}
                             <div className="form-group">
                                 <label>Notes</label>
-                                <textarea className="form-control" rows={2} placeholder="Extra notes..." value={form.notes}
-                                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+                                <input className="form-control" placeholder="Extra notes..." value={form.notes} onChange={e => sf({ notes: e.target.value })} />
                             </div>
 
-                            {/* Toggles */}
-                            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    <input type="checkbox" checked={form.todaysFocus} onChange={e => setForm(f => ({ ...f, todaysFocus: e.target.checked }))} />
+                            {/* Toggles row */}
+                            <div style={{ display: 'flex', gap: '20px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>
+                                    <input type="checkbox" checked={form.todaysFocus} onChange={e => sf({ todaysFocus: e.target.checked })} />
                                     ⭐ Today's Focus
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    <input type="checkbox" checked={form.isRecurring} onChange={e => setForm(f => ({ ...f, isRecurring: e.target.checked }))} />
-                                    🔁 Recurring Task
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>
+                                    <input type="checkbox" checked={form.isRecurring} onChange={e => sf({ isRecurring: e.target.checked })} />
+                                    🔁 Recurring
                                 </label>
                             </div>
 
+                            {/* Recurring days */}
                             {form.isRecurring && (
                                 <div className="form-group">
-                                    <label>Repeat on days</label>
-                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                    <label>Repeat on</label>
+                                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                                         {DAYS.map(d => (
                                             <button key={d} type="button"
                                                 className={`btn btn-sm ${form.recurringDays?.includes(d) ? 'btn-primary' : 'btn-secondary'}`}
-                                                onClick={() => setForm(f => ({ ...f, recurringDays: f.recurringDays?.includes(d) ? f.recurringDays.filter(x => x !== d) : [...(f.recurringDays || []), d] }))}>
+                                                onClick={() => sf({ recurringDays: form.recurringDays?.includes(d) ? form.recurringDays.filter(x => x !== d) : [...(form.recurringDays || []), d] })}>
                                                 {d}
                                             </button>
                                         ))}
