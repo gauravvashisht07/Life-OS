@@ -16,6 +16,7 @@ app.use('/api/goals', require('./routes/goals'));
 app.use('/api/study', require('./routes/study'));
 app.use('/api/journal', require('./routes/journal'));
 app.use('/api/finance', require('./routes/finance'));
+app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/analytics', require('./routes/analytics'));
 
 // Health check — Render pings this to confirm the service is alive

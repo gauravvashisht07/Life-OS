@@ -12,6 +12,7 @@ import Study from './pages/Study'
 import Journal from './pages/Journal'
 import Finance from './pages/Finance'
 import Analytics from './pages/Analytics'
+import Tasks from './pages/Tasks'
 
 function PrivateRoute({ children }) {
     const { token } = useAuth()
@@ -61,6 +62,7 @@ function AppLayout() {
                     <Route path="/study" element={<PrivateRoute><Study /></PrivateRoute>} />
                     <Route path="/journal" element={<PrivateRoute><Journal /></PrivateRoute>} />
                     <Route path="/finance" element={<PrivateRoute><Finance /></PrivateRoute>} />
+                    <Route path="/tasks" element={<PrivateRoute><Tasks /></PrivateRoute>} />
                     <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
                     <Route path="*" element={<Navigate to="/" />} />
                 </Routes>

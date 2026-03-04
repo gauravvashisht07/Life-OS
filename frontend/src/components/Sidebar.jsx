@@ -5,6 +5,7 @@ const navLinks = [
     { to: '/', icon: '🏠', label: 'Dashboard' },
     { to: '/habits', icon: '🔥', label: 'Habits' },
     { to: '/goals', icon: '🎯', label: 'Goals' },
+    { to: '/tasks', icon: '✅', label: 'Tasks' },
     { to: '/study', icon: '📚', label: 'Study' },
     { to: '/journal', icon: '📝', label: 'Journal' },
     { to: '/finance', icon: '💰', label: 'Finance' },
