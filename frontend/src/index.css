@@ -547,9 +547,13 @@ textarea.form-control {
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  /* don't center — avoids top clip */
   justify-content: center;
-  padding: 16px;
+  padding: 24px 16px;
+  overflow-y: auto;
+  /* overlay scrolls when modal is tall */
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal {
@@ -559,9 +563,12 @@ textarea.form-control {
   padding: 28px 24px;
   width: 100%;
   max-width: 480px;
-  max-height: 92vh;
-  overflow-y: auto;
+  max-height: none;
+  /* let overlay handle scrolling */
+  margin: auto 0;
+  /* vertical centering when content is short */
   animation: modalIn 0.25s ease;
+  flex-shrink: 0;
 }
 
 @keyframes modalIn {
