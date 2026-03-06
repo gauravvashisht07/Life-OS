@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from '../api'
 import toast from 'react-hot-toast'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import Modal from '../components/Modal'
 
 const EXPENSE_CATS = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Education', 'Bills', 'Other']
 const INCOME_CATS = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other']
@@ -125,52 +126,48 @@ export default function Finance() {
                     )}
             </div>
 
-            {showModal && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="modal">
-                        <div className="modal-header"><h3>💰 Add Transaction</h3><button className="modal-close" onClick={() => setShowModal(false)}>×</button></div>
-                        <form onSubmit={handleCreate}>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                                {['expense', 'income'].map(t => (
-                                    <button key={t} type="button" className={`btn btn-sm ${form.type === t ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, justifyContent: 'center', textTransform: 'capitalize' }}
-                                        onClick={() => setForm({ ...form, type: t, category: t === 'expense' ? 'Food' : 'Salary' })}>{t}</button>
-                                ))}
-                            </div>
-                            <div className="form-group">
-                                <label>Title</label>
-                                <input className="form-control" placeholder="e.g. Grocery shopping" value={form.title}
-                                    onChange={e => setForm({ ...form, title: e.target.value })} required />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Amount (₹)</label>
-                                    <input type="number" min="1" className="form-control" placeholder="0" value={form.amount}
-                                        onChange={e => setForm({ ...form, amount: e.target.value })} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Category</label>
-                                    <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                                        {(form.type === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Date</label>
-                                    <input type="date" className="form-control" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Note (optional)</label>
-                                    <input className="form-control" placeholder="..." value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} />
-                                </div>
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                                {form.type === 'income' ? '💚 Add Income' : '❤️ Add Expense'}
-                            </button>
-                        </form>
+            <Modal show={showModal} onClose={() => setShowModal(false)}>
+                <div className="modal-header"><h3>💰 Add Transaction</h3><button className="modal-close" onClick={() => setShowModal(false)}>×</button></div>
+                <form onSubmit={handleCreate}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                        {['expense', 'income'].map(t => (
+                            <button key={t} type="button" className={`btn btn-sm ${form.type === t ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, justifyContent: 'center', textTransform: 'capitalize' }}
+                                onClick={() => setForm({ ...form, type: t, category: t === 'expense' ? 'Food' : 'Salary' })}>{t}</button>
+                        ))}
                     </div>
-                </div>
-            )}
+                    <div className="form-group">
+                        <label>Title</label>
+                        <input className="form-control" placeholder="e.g. Grocery shopping" value={form.title}
+                            onChange={e => setForm({ ...form, title: e.target.value })} required />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Amount (₹)</label>
+                            <input type="number" min="1" className="form-control" placeholder="0" value={form.amount}
+                                onChange={e => setForm({ ...form, amount: e.target.value })} required />
+                        </div>
+                        <div className="form-group">
+                            <label>Category</label>
+                            <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                                {(form.type === 'expense' ? EXPENSE_CATS : INCOME_CATS).map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Date</label>
+                            <input type="date" className="form-control" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Note (optional)</label>
+                            <input className="form-control" placeholder="..." value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} />
+                        </div>
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                        {form.type === 'income' ? '💚 Add Income' : '❤️ Add Expense'}
+                    </button>
+                </form>
+            </Modal>
         </div>
     )
 }

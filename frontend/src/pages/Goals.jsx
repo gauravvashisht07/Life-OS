@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from '../api'
 import toast from 'react-hot-toast'
+import Modal from '../components/Modal'
 
 const CATEGORIES = ['Career', 'Health', 'Education', 'Finance', 'Personal', 'Creative', 'Relationships']
 const TYPE_CONFIG = {
@@ -130,50 +131,46 @@ export default function Goals() {
                 </div>
             )}
 
-            {showModal && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3>🎯 New Goal</h3>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-                        </div>
-                        <form onSubmit={handleCreate}>
-                            <div className="form-group">
-                                <label>Goal Title</label>
-                                <input className="form-control" placeholder="What do you want to achieve?" value={form.title}
-                                    onChange={e => setForm({ ...form, title: e.target.value })} required />
-                            </div>
-                            <div className="form-group">
-                                <label>Description</label>
-                                <textarea className="form-control" placeholder="Why is this goal important?" value={form.description}
-                                    onChange={e => setForm({ ...form, description: e.target.value })} rows={2} />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Type</label>
-                                    <select className="form-control" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                                        <option value="short">⚡ Short-Term (&lt;1mo)</option>
-                                        <option value="mid">🎯 Mid-Term (1–6mo)</option>
-                                        <option value="long">🏆 Long-Term (6mo+)</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Category</label>
-                                    <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Deadline (optional)</label>
-                                <input type="date" className="form-control" value={form.deadline}
-                                    onChange={e => setForm({ ...form, deadline: e.target.value })} />
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Create Goal 🎯</button>
-                        </form>
-                    </div>
+            <Modal show={showModal} onClose={() => setShowModal(false)}>
+                <div className="modal-header">
+                    <h3>🎯 New Goal</h3>
+                    <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                 </div>
-            )}
+                <form onSubmit={handleCreate}>
+                    <div className="form-group">
+                        <label>Goal Title</label>
+                        <input className="form-control" placeholder="What do you want to achieve?" value={form.title}
+                            onChange={e => setForm({ ...form, title: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                        <label>Description</label>
+                        <textarea className="form-control" placeholder="Why is this goal important?" value={form.description}
+                            onChange={e => setForm({ ...form, description: e.target.value })} rows={2} />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Type</label>
+                            <select className="form-control" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                                <option value="short">⚡ Short-Term (&lt;1mo)</option>
+                                <option value="mid">🎯 Mid-Term (1–6mo)</option>
+                                <option value="long">🏆 Long-Term (6mo+)</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Category</label>
+                            <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Deadline (optional)</label>
+                        <input type="date" className="form-control" value={form.deadline}
+                            onChange={e => setForm({ ...form, deadline: e.target.value })} />
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Create Goal 🎯</button>
+                </form>
+            </Modal>
         </div>
     )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from '../api'
 import toast from 'react-hot-toast'
+import Modal from '../components/Modal'
 
 const CATEGORIES = ['DSA', 'ML', 'Web', 'System Design', 'Other']
 const PLATFORMS = ['LeetCode', 'Codeforces', 'HackerRank', 'Kaggle', 'YouTube', 'Book', 'Course', 'Other']
@@ -158,62 +159,58 @@ export default function Study() {
                 )
             )}
 
-            {showModal && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="modal">
-                        <div className="modal-header"><h3>📚 Log Study Session</h3><button className="modal-close" onClick={() => setShowModal(false)}>×</button></div>
-                        <form onSubmit={handleCreate}>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Category</label>
-                                    <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Platform</label>
-                                    <select className="form-control" value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })}>
-                                        {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Topic</label>
-                                <input className="form-control" placeholder="e.g. Dynamic Programming" value={form.topic}
-                                    onChange={e => setForm({ ...form, topic: e.target.value })} required />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Hours Spent</label>
-                                    <input type="number" min="0.5" max="24" step="0.5" className="form-control" value={form.hoursSpent}
-                                        onChange={e => setForm({ ...form, hoursSpent: Number(e.target.value) })} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Questions Solved</label>
-                                    <input type="number" min="0" className="form-control" value={form.questionsSolved}
-                                        onChange={e => setForm({ ...form, questionsSolved: Number(e.target.value) })} />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Confidence (1–5)</label>
-                                <StarRating value={form.confidence} onChange={v => setForm({ ...form, confidence: v })} />
-                            </div>
-                            <div className="form-group">
-                                <label>Date</label>
-                                <input type="date" className="form-control" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label>Notes</label>
-                                <textarea className="form-control" placeholder="What did you learn?" rows={2} value={form.notes}
-                                    onChange={e => setForm({ ...form, notes: e.target.value })} />
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                                Log Session (+{Math.round(form.hoursSpent * 15 + form.questionsSolved * 5)} XP)
-                            </button>
-                        </form>
+            <Modal show={showModal} onClose={() => setShowModal(false)}>
+                <div className="modal-header"><h3>📚 Log Study Session</h3><button className="modal-close" onClick={() => setShowModal(false)}>×</button></div>
+                <form onSubmit={handleCreate}>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Category</label>
+                            <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>Platform</label>
+                            <select className="form-control" value={form.platform} onChange={e => setForm({ ...form, platform: e.target.value })}>
+                                {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                        </div>
                     </div>
-                </div>
-            )}
+                    <div className="form-group">
+                        <label>Topic</label>
+                        <input className="form-control" placeholder="e.g. Dynamic Programming" value={form.topic}
+                            onChange={e => setForm({ ...form, topic: e.target.value })} required />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Hours Spent</label>
+                            <input type="number" min="0.5" max="24" step="0.5" className="form-control" value={form.hoursSpent}
+                                onChange={e => setForm({ ...form, hoursSpent: Number(e.target.value) })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Questions Solved</label>
+                            <input type="number" min="0" className="form-control" value={form.questionsSolved}
+                                onChange={e => setForm({ ...form, questionsSolved: Number(e.target.value) })} />
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Confidence (1–5)</label>
+                        <StarRating value={form.confidence} onChange={v => setForm({ ...form, confidence: v })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Date</label>
+                        <input type="date" className="form-control" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                        <label>Notes</label>
+                        <textarea className="form-control" placeholder="What did you learn?" rows={2} value={form.notes}
+                            onChange={e => setForm({ ...form, notes: e.target.value })} />
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                        Log Session (+{Math.round(form.hoursSpent * 15 + form.questionsSolved * 5)} XP)
+                    </button>
+                </form>
+            </Modal>
         </div>
     )
 }

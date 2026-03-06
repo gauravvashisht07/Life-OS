@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from '../api'
 import toast from 'react-hot-toast'
+import Modal from '../components/Modal'
 
 const ICONS = ['💪', '📖', '🧘', '🏃', '💧', '🥗', '😴', '🎵', '✍️', '🌅']
 const COLORS = ['#89b4fa', '#cba6f7', '#a6e3a1', '#f38ba8', '#94e2d5', '#f9e2af', '#fab387', '#f5c2e7']
@@ -121,51 +122,47 @@ export default function Habits() {
                 )
             }
 
-            {showModal && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3>✨ New Habit</h3>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-                        </div>
-                        <form onSubmit={handleCreate}>
-                            <div className="form-group">
-                                <label>Habit Name</label>
-                                <input className="form-control" placeholder="e.g. Morning Exercise" value={form.name}
-                                    onChange={e => setForm({ ...form, name: e.target.value })} required />
-                            </div>
-                            <div className="form-group">
-                                <label>Icon</label>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                    {ICONS.map(ic => (
-                                        <button key={ic} type="button" onClick={() => setForm({ ...form, icon: ic })}
-                                            style={{ fontSize: '1.4rem', padding: '6px', border: `2px solid ${form.icon === ic ? 'var(--accent)' : 'var(--border)'}`, borderRadius: '8px', background: 'var(--bg-card)', cursor: 'pointer' }}>
-                                            {ic}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Color</label>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {COLORS.map(c => (
-                                        <div key={c} onClick={() => setForm({ ...form, color: c })}
-                                            style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', border: `3px solid ${form.color === c ? 'white' : 'transparent'}`, transition: 'all 0.2s' }} />
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Frequency</label>
-                                <select className="form-control" value={form.frequency} onChange={e => setForm({ ...form, frequency: e.target.value })}>
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                </select>
-                            </div>
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Create Habit 💪</button>
-                        </form>
-                    </div>
+            <Modal show={showModal} onClose={() => setShowModal(false)}>
+                <div className="modal-header">
+                    <h3>✨ New Habit</h3>
+                    <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                 </div>
-            )}
+                <form onSubmit={handleCreate}>
+                    <div className="form-group">
+                        <label>Habit Name</label>
+                        <input className="form-control" placeholder="e.g. Morning Exercise" value={form.name}
+                            onChange={e => setForm({ ...form, name: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                        <label>Icon</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {ICONS.map(ic => (
+                                <button key={ic} type="button" onClick={() => setForm({ ...form, icon: ic })}
+                                    style={{ fontSize: '1.4rem', padding: '6px', border: `2px solid ${form.icon === ic ? 'var(--accent)' : 'var(--border)'}`, borderRadius: '8px', background: 'var(--bg-card)', cursor: 'pointer' }}>
+                                    {ic}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Color</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            {COLORS.map(c => (
+                                <div key={c} onClick={() => setForm({ ...form, color: c })}
+                                    style={{ width: 28, height: 28, borderRadius: '50%', background: c, cursor: 'pointer', border: `3px solid ${form.color === c ? 'white' : 'transparent'}`, transition: 'all 0.2s' }} />
+                            ))}
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Frequency</label>
+                        <select className="form-control" value={form.frequency} onChange={e => setForm({ ...form, frequency: e.target.value })}>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Create Habit 💪</button>
+                </form>
+            </Modal>
         </div>
     )
 }
