@@ -561,8 +561,8 @@ textarea.form-control {
   border-radius: var(--radius-lg);
   padding: 24px 20px;
   width: 100%;
-  max-width: 480px;
-  max-height: 88vh;
+  max-width: 680px;
+  max-height: 92vh;
   overflow-y: auto;
   animation: modalIn 0.25s ease;
   margin: auto;
