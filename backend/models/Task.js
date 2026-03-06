@@ -17,7 +17,9 @@ const TaskSchema = new mongoose.Schema({
     notes: { type: String, default: '' },
     todaysFocus: { type: Boolean, default: false },
     isRecurring: { type: Boolean, default: false },
+    recurringType: { type: String, enum: ['none', 'daily', 'weekly', 'monthly'], default: 'none' },
     recurringDays: [{ type: String, enum: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }],
+    estimatedTime: { type: String, default: '' },  // e.g. '30min', '1hr'
     timeSpent: { type: Number, default: 0 },    // seconds
     order: { type: Number, default: 0 },    // for drag-and-drop ordering
     completedAt: { type: Date },

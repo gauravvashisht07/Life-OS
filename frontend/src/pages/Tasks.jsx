@@ -7,6 +7,8 @@ const CATEGORIES = ['Study', 'Coding', 'Health', 'Personal', 'Work', 'Other']
 const PRIORITIES = ['high', 'medium', 'low']
 const STATUSES = ['pending', 'in-progress', 'completed', 'skipped']
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const RECUR_TYPES = ['none', 'daily', 'weekly', 'monthly']
+const EST_TIMES = ['15min', '30min', '1hr', '2hr', '4hr', 'Full day']
 
 const PRIORITY_COLOR = { high: 'var(--red)', medium: 'var(--yellow)', low: 'var(--green)' }
 const PRIORITY_ICON = { high: '🔴', medium: '🟡', low: '🟢' }
@@ -19,7 +21,22 @@ function fmtTime(sec) {
     return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`
 }
 
-const blank = { title: '', description: '', category: 'Personal', priority: 'medium', status: 'pending', deadline: '', notes: '', todaysFocus: false, isRecurring: false, recurringDays: [], subtasks: [] }
+const blank = {
+    title: '', description: '', category: 'Personal', priority: 'medium',
+    status: 'pending', deadline: '', notes: '', todaysFocus: false,
+    isRecurring: false, recurringType: 'none', recurringDays: [],
+    subtasks: [], estimatedTime: ''
+}
+
+function SectionLabel({ children }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '18px 0 14px' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{children}</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        </div>
+    )
+}
 
 export default function Tasks() {
     const [tasks, setTasks] = useState([])
@@ -55,13 +72,23 @@ export default function Tasks() {
     }
 
     const openCreate = () => { setForm(blank); setEditTask(null); setSubtaskInput(''); setShowModal(true) }
-    const openEdit = (t) => { setForm({ ...t, recurringDays: t.recurringDays || [], subtasks: t.subtasks || [] }); setEditTask(t._id); setSubtaskInput(''); setShowModal(true) }
+    const openEdit = (t) => {
+        setForm({
+            ...t,
+            recurringType: t.recurringType || (t.isRecurring ? 'weekly' : 'none'),
+            recurringDays: t.recurringDays || [],
+            subtasks: t.subtasks || [],
+            estimatedTime: t.estimatedTime || ''
+        })
+        setEditTask(t._id); setSubtaskInput(''); setShowModal(true)
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         try {
-            if (editTask) await axios.put(`/api/tasks/${editTask}`, form)
-            else await axios.post('/api/tasks', form)
+            const payload = { ...form, isRecurring: form.recurringType !== 'none' }
+            if (editTask) await axios.put(`/api/tasks/${editTask}`, payload)
+            else await axios.post('/api/tasks', payload)
             toast.success(editTask ? '✏️ Task updated!' : '✅ Task created!')
             setShowModal(false); fetchAll()
         } catch { toast.error('Failed to save task') }
@@ -74,7 +101,12 @@ export default function Tasks() {
         const subtasks = task.subtasks.map((s, i) => i === idx ? { ...s, done: !s.done } : s)
         await axios.put(`/api/tasks/${task._id}`, { subtasks }); fetchAll()
     }
-    const addSubtask = () => { if (!subtaskInput.trim()) return; setForm(f => ({ ...f, subtasks: [...(f.subtasks || []), { title: subtaskInput.trim(), done: false }] })); setSubtaskInput('') }
+
+    const addSubtask = () => {
+        if (!subtaskInput.trim()) return
+        setForm(f => ({ ...f, subtasks: [...(f.subtasks || []), { title: subtaskInput.trim(), done: false }] }))
+        setSubtaskInput('')
+    }
     const removeSubtask = (idx) => setForm(f => ({ ...f, subtasks: f.subtasks.filter((_, i) => i !== idx) }))
 
     const onDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = 'move' }
@@ -87,7 +119,11 @@ export default function Tasks() {
         await axios.patch('/api/tasks/reorder', { orderedIds: reordered }); setDragId(null)
     }
 
-    const filtered = tasks.filter(t => (!filter.status || t.status === filter.status) && (!filter.category || t.category === filter.category) && (!filter.priority || t.priority === filter.priority))
+    const filtered = tasks.filter(t =>
+        (!filter.status || t.status === filter.status) &&
+        (!filter.category || t.category === filter.category) &&
+        (!filter.priority || t.priority === filter.priority)
+    )
     const focusTasks = tasks.filter(t => t.todaysFocus && t.status !== 'completed')
     const today = new Date().toISOString().split('T')[0]
     const sf = v => setForm(f => ({ ...f, ...v }))
@@ -175,11 +211,12 @@ export default function Tasks() {
                                                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                                                     <span className="badge badge-blue">{CAT_ICON[task.category]} {task.category}</span>
                                                     {task.deadline && <span className={`badge ${isOverdue ? 'badge-red' : 'badge-yellow'}`}>📅 {task.deadline}</span>}
-                                                    {task.isRecurring && <span className="badge badge-purple">🔁</span>}
+                                                    {task.estimatedTime && <span className="badge badge-purple">⏳ {task.estimatedTime}</span>}
+                                                    {task.isRecurring && <span className="badge badge-purple">🔁 {task.recurringType || 'recurring'}</span>}
                                                     {task.todaysFocus && <span className="badge badge-yellow">⭐</span>}
                                                     {task.timeSpent > 0 && <span className="badge badge-green">⏱️ {fmtTime(task.timeSpent)}</span>}
                                                 </div>
-                                                {task.description && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{task.description}</p>}
+                                                {task.notes && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>{task.notes}</p>}
                                                 {task.subtasks?.length > 0 && (
                                                     <div style={{ marginTop: '8px' }}>
                                                         <div style={{ height: '3px', background: 'rgba(49,50,68,0.6)', borderRadius: '2px', marginBottom: '5px' }}>
@@ -193,7 +230,6 @@ export default function Tasks() {
                                                         ))}
                                                     </div>
                                                 )}
-                                                {task.notes && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', fontStyle: 'italic' }}>📝 {task.notes}</p>}
                                             </div>
                                             <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
                                                 <button className="btn-icon" onClick={() => toggleFocus(task)} style={{ color: task.todaysFocus ? 'var(--yellow)' : 'var(--text-muted)' }}>⭐</button>
@@ -266,30 +302,51 @@ export default function Tasks() {
                             <h3>{editTask ? '✏️ Edit Task' : '✅ New Task'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
+
                         <form onSubmit={handleSubmit}>
-                            {/* Title */}
+
+                            {/* ── SECTION 1: Basic Info ── */}
+                            <SectionLabel>Basic Info</SectionLabel>
+
                             <div className="form-group">
                                 <label>Title *</label>
-                                <input className="form-control" placeholder="Task title..." value={form.title} onChange={e => sf({ title: e.target.value })} required />
+                                <input className="form-control" placeholder="What do you need to do?" value={form.title} onChange={e => sf({ title: e.target.value })} required autoFocus />
                             </div>
 
-                            {/* Category + Priority */}
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Category</label>
-                                    <select className="form-control" value={form.category} onChange={e => sf({ category: e.target.value })}>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{CAT_ICON[c]} {c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>Priority</label>
-                                    <select className="form-control" value={form.priority} onChange={e => sf({ priority: e.target.value })}>
-                                        {PRIORITIES.map(p => <option key={p} value={p}>{PRIORITY_ICON[p]} {p}</option>)}
-                                    </select>
+                            <div className="form-group">
+                                <label>Category</label>
+                                <div className="pill-group">
+                                    {CATEGORIES.map(c => (
+                                        <button key={c} type="button"
+                                            className={`pill-btn ${form.category === c ? 'pill-active' : ''}`}
+                                            onClick={() => sf({ category: c })}>
+                                            {CAT_ICON[c]} {c}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Status + Deadline */}
+                            <div className="form-group">
+                                <label>Priority</label>
+                                <div className="pill-group">
+                                    {PRIORITIES.map(p => (
+                                        <button key={p} type="button"
+                                            className="pill-btn"
+                                            style={{
+                                                background: form.priority === p ? `${PRIORITY_COLOR[p]}22` : undefined,
+                                                borderColor: form.priority === p ? PRIORITY_COLOR[p] : undefined,
+                                                color: form.priority === p ? PRIORITY_COLOR[p] : undefined,
+                                            }}
+                                            onClick={() => sf({ priority: p })}>
+                                            {PRIORITY_ICON[p]} {p.charAt(0).toUpperCase() + p.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ── SECTION 2: Schedule ── */}
+                            <SectionLabel>Schedule</SectionLabel>
+
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Status</label>
@@ -303,59 +360,84 @@ export default function Tasks() {
                                 </div>
                             </div>
 
-                            {/* Description */}
-                            <div className="form-group">
-                                <label>Description</label>
-                                <input className="form-control" placeholder="Optional details..." value={form.description} onChange={e => sf({ description: e.target.value })} />
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Estimated Time</label>
+                                    <select className="form-control" value={form.estimatedTime} onChange={e => sf({ estimatedTime: e.target.value })}>
+                                        <option value="">Not set</option>
+                                        {EST_TIMES.map(t => <option key={t} value={t}>⏳ {t}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Today's Focus</label>
+                                    <button type="button"
+                                        onClick={() => sf({ todaysFocus: !form.todaysFocus })}
+                                        style={{
+                                            width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                                            border: form.todaysFocus ? '1px solid var(--yellow)' : '1px solid var(--border)',
+                                            background: form.todaysFocus ? 'rgba(249,226,175,0.12)' : 'rgba(17,17,27,0.6)',
+                                            color: form.todaysFocus ? 'var(--yellow)' : 'var(--text-muted)',
+                                            cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem',
+                                            transition: 'all 0.2s', textAlign: 'left'
+                                        }}>
+                                        {form.todaysFocus ? '⭐ In Today\'s Focus' : '☆ Add to Focus'}
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Subtasks */}
+                            {/* ── SECTION 3: Details ── */}
+                            <SectionLabel>Details</SectionLabel>
+
                             <div className="form-group">
-                                <label>Subtasks</label>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <input className="form-control" placeholder="Add subtask & press Enter..." value={subtaskInput}
-                                        onChange={e => setSubtaskInput(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
-                                    <button type="button" className="btn btn-sm btn-secondary" onClick={addSubtask} style={{ flexShrink: 0 }}>+</button>
-                                </div>
+                                <label>Notes</label>
+                                <textarea className="form-control" rows={3}
+                                    placeholder="Add any details, context, or extra notes…"
+                                    value={form.notes}
+                                    onChange={e => sf({ notes: e.target.value, description: e.target.value })} />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Subtasks <span style={{ color: 'var(--text-dim)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>— press Enter to add</span></label>
+                                <input className="form-control"
+                                    placeholder="Type a subtask and press Enter…"
+                                    value={subtaskInput}
+                                    onChange={e => setSubtaskInput(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
                                 {(form.subtasks || []).length > 0 && (
-                                    <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    <div className="subtask-chips">
                                         {(form.subtasks || []).map((s, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', background: 'rgba(49,50,68,0.5)', borderRadius: '6px' }}>
-                                                <span style={{ flex: 1, fontSize: '0.78rem' }}>• {s.title}</span>
-                                                <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '1rem' }} onClick={() => removeSubtask(i)}>×</button>
+                                            <div key={i} className="subtask-chip">
+                                                <span>• {s.title}</span>
+                                                <button type="button" onClick={() => removeSubtask(i)}>×</button>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Notes */}
+                            {/* ── SECTION 4: Advanced ── */}
+                            <SectionLabel>Advanced</SectionLabel>
+
                             <div className="form-group">
-                                <label>Notes</label>
-                                <input className="form-control" placeholder="Extra notes..." value={form.notes} onChange={e => sf({ notes: e.target.value })} />
+                                <label>Recurring</label>
+                                <div className="pill-group">
+                                    {RECUR_TYPES.map(r => (
+                                        <button key={r} type="button"
+                                            className={`pill-btn ${form.recurringType === r ? 'pill-active' : ''}`}
+                                            onClick={() => sf({ recurringType: r, isRecurring: r !== 'none' })}>
+                                            {r === 'none' ? '🚫 None' : r === 'daily' ? '☀️ Daily' : r === 'weekly' ? '📅 Weekly' : '📆 Monthly'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Toggles row */}
-                            <div style={{ display: 'flex', gap: '20px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                                    <input type="checkbox" checked={form.todaysFocus} onChange={e => sf({ todaysFocus: e.target.checked })} />
-                                    ⭐ Today's Focus
-                                </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>
-                                    <input type="checkbox" checked={form.isRecurring} onChange={e => sf({ isRecurring: e.target.checked })} />
-                                    🔁 Recurring
-                                </label>
-                            </div>
-
-                            {/* Recurring days */}
-                            {form.isRecurring && (
+                            {form.recurringType === 'weekly' && (
                                 <div className="form-group">
                                     <label>Repeat on</label>
-                                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                    <div className="pill-group">
                                         {DAYS.map(d => (
                                             <button key={d} type="button"
-                                                className={`btn btn-sm ${form.recurringDays?.includes(d) ? 'btn-primary' : 'btn-secondary'}`}
+                                                className={`pill-btn day-pill ${form.recurringDays?.includes(d) ? 'pill-active' : ''}`}
                                                 onClick={() => sf({ recurringDays: form.recurringDays?.includes(d) ? form.recurringDays.filter(x => x !== d) : [...(form.recurringDays || []), d] })}>
                                                 {d}
                                             </button>
@@ -364,9 +446,10 @@ export default function Tasks() {
                                 </div>
                             )}
 
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '20px' }}>
                                 {editTask ? '💾 Save Changes' : '✅ Create Task'}
                             </button>
+
                         </form>
                     </div>
                 </div>
