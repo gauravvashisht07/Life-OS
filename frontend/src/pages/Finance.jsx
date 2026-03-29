@@ -11,12 +11,15 @@ const PIE_COLORS   = ['#89b4fa', '#cba6f7', '#a6e3a1', '#f38ba8', '#94e2d5', '#f
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default function Finance() {
-  const [records,   setRecords]   = useState([])
-  const [showModal, setShowModal] = useState(false)
-  const [typeFilter, setTypeFilter] = useState('all')        // all | income | expense
-  const [monthFilter, setMonthFilter] = useState('all')      // all | YYYY-MM
-  const [form, setForm] = useState({ title: '', amount: '', type: 'expense', category: 'Food', date: new Date().toISOString().split('T')[0], note: '' })
-  const [loading, setLoading] = useState(true)
+  const [records,      setRecords]      = useState([])
+  const [showModal,    setShowModal]    = useState(false)
+  const [typeFilter,   setTypeFilter]   = useState('all')
+  const [monthFilter,  setMonthFilter]  = useState('all')
+  const [form,         setForm]         = useState({ title: '', amount: '', type: 'expense', category: 'Food', date: new Date().toISOString().split('T')[0], note: '' })
+  const [loading,      setLoading]      = useState(true)
+  const [aiInsight,    setAiInsight]    = useState('')
+  const [aiLoading,    setAiLoading]    = useState(false)
+  const [showInsight,  setShowInsight]  = useState(false)
 
   const fetchData = async () => {
     const res = await axios.get('/api/finance')
@@ -70,6 +73,22 @@ export default function Finance() {
     return `${MONTH_NAMES[parseInt(m) - 1]} ${y}`
   }
 
+  const analyzeWithAI = async () => {
+    if (records.length === 0) { toast.error('Add some transactions first!'); return }
+    setAiLoading(true); setShowInsight(true)
+    try {
+      const res = await axios.post('/api/finance/ai-analyze')
+      setAiInsight(res.data.insight)
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'AI analysis failed'
+      if (msg.includes('GEMINI_API_KEY')) {
+        setAiInsight('⚠️ **GEMINI_API_KEY not set.**\n\nAdd it to your backend `.env` file and Render environment variables:\n```\nGEMINI_API_KEY=your_key_here\n```\n\nGet a free key at [aistudio.google.com](https://aistudio.google.com)')
+      } else {
+        setAiInsight('❌ ' + msg)
+      }
+    } finally { setAiLoading(false) }
+  }
+
   return (
     <div className="page fade-in">
       {/* Header */}
@@ -78,7 +97,14 @@ export default function Finance() {
           <h2>💰 Finance Tracker</h2>
           <p>Income, expenses &amp; budget overview</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Record</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className={`btn btn-sm ${showInsight ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => showInsight ? setShowInsight(false) : analyzeWithAI()}
+            disabled={aiLoading}>
+            {aiLoading ? '⏳ Analyzing...' : '🤖 AI Insights'}
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add Record</button>
+        </div>
       </div>
 
       {/* Summary Cards — reflect selected month */}
@@ -121,6 +147,50 @@ export default function Finance() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* AI Insight Panel */}
+      {showInsight && (
+        <div className="card" style={{ marginBottom: '24px', border: '1px solid rgba(203,166,247,0.3)', background: 'rgba(203,166,247,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <h3 style={{ fontFamily: 'Space Grotesk', fontSize: '1rem', color: 'var(--purple)', margin: 0 }}>
+              🤖 AI Financial Insights
+            </h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {!aiLoading && <button className="btn btn-sm btn-secondary" onClick={analyzeWithAI}>🔄 Refresh</button>}
+              <button className="btn btn-sm btn-secondary" onClick={() => setShowInsight(false)}>✕</button>
+            </div>
+          </div>
+
+          {aiLoading ? (
+            /* Loading skeleton */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[90, 70, 85, 60, 75].map((w, i) => (
+                <div key={i} style={{ height: '14px', width: `${w}%`, background: 'rgba(203,166,247,0.15)', borderRadius: '6px', animation: 'pulse 1.5s infinite' }} />
+              ))}
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '8px' }}>
+                ⚡ Gemini AI is analyzing your last 90 days of transactions...
+              </p>
+            </div>
+          ) : (
+            /* Render AI text with basic markdown */
+            <div style={{ fontSize: '0.875rem', lineHeight: 1.7, color: 'var(--text)' }}>
+              {aiInsight.split('\n').map((line, i) => {
+                if (!line.trim()) return <br key={i} />
+                // Bold **text**
+                const parts = line.split(/\*\*(.+?)\*\*/g)
+                const rendered = parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ color: 'var(--text)' }}>{p}</strong> : p)
+                // Bullet points
+                const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('• ')
+                return (
+                  <p key={i} style={{ margin: '4px 0', paddingLeft: isBullet ? '12px' : 0, borderLeft: isBullet ? '2px solid rgba(203,166,247,0.4)' : 'none' }}>
+                    {rendered}
+                  </p>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
