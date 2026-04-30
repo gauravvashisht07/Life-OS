@@ -85,7 +85,7 @@ life-os/
 │   │   ├── components/
 │   │   ├── pages/
 │   │   ├── context/
-│   │   └── styles/
+│   │   └── index.css      # Main Stylesheet
 │   └── package.json
 └── README.md
 
