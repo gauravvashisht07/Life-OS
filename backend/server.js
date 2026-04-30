@@ -9,6 +9,12 @@ const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
+// Logging middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/habits', require('./routes/habits'));
@@ -19,7 +25,17 @@ app.use('/api/finance', require('./routes/finance'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/analytics', require('./routes/analytics'));
 
-// Health check — Render pings this to confirm the service is alive
+// Centralized Error Handler
+app.use((err, req, res, next) => {
+    console.error(`❌ Error: ${err.message}`);
+    const status = err.status || 500;
+    res.status(status).json({
+        message: err.message || 'Internal Server Error',
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack
+    });
+});
+
+// Health check
 app.get('/', (req, res) => res.json({ status: 'LifeOS API running 🚀' }));
 app.get('/api/health', (req, res) => res.json({ status: 'LifeOS API running 🚀' }));
 

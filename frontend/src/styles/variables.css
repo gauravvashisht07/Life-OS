@@ -1,0 +1,32 @@
+/* ===== DESIGN SYSTEM VARIABLES ===== */
+:root {
+  --bg: #0a0a0f;
+  --bg-surface: rgba(17, 17, 27, 0.92);
+  --bg-card: rgba(30, 30, 46, 0.7);
+  --bg-card-hover: rgba(49, 50, 68, 0.8);
+  --border: rgba(113, 121, 153, 0.2);
+  --border-bright: rgba(137, 180, 250, 0.3);
+  --text: #cdd6f4;
+  --text-muted: #7c7f93;
+  --text-dim: #585b70;
+  --accent: #89b4fa;
+  --accent-hover: #b4d0fb;
+  --purple: #cba6f7;
+  --green: #a6e3a1;
+  --red: #f38ba8;
+  --yellow: #f9e2af;
+  --orange: #fab387;
+  --teal: #94e2d5;
+  --pink: #f5c2e7;
+  --gradient-1: linear-gradient(135deg, #89b4fa, #cba6f7);
+  --gradient-2: linear-gradient(135deg, #a6e3a1, #94e2d5);
+  --gradient-3: linear-gradient(135deg, #f38ba8, #fab387);
+  --gradient-4: linear-gradient(135deg, #f9e2af, #fab387);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 30px rgba(137, 180, 250, 0.15);
+  --radius: 16px;
+  --radius-sm: 8px;
+  --radius-lg: 24px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-w: 240px;
+}

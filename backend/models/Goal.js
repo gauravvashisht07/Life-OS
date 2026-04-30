@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const goalSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true },
     description: { type: String, default: '' },
     type: { type: String, enum: ['short', 'mid', 'long'], required: true },

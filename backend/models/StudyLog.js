@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const studyLogSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     topic: { type: String, required: true },
     category: { type: String, enum: ['DSA', 'ML', 'Web', 'System Design', 'Other'], default: 'DSA' },
     subCategory: { type: String, default: '' },
