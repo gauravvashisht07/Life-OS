@@ -50,8 +50,8 @@ export default function Sidebar({ open, onClose }) {
                         <div className="user-level">Level {user?.level || 1} · {user?.xp || 0} XP</div>
                     </div>
                 </div>
-                <div style={{ marginTop: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                <div className="sidebar-xp">
+                    <div className="xp-header">
                         <span>XP Progress</span>
                         <span>{(user?.xp || 0) % xpPerLevel} / {xpPerLevel}</span>
                     </div>
@@ -59,7 +59,14 @@ export default function Sidebar({ open, onClose }) {
                         <div className="xp-fill" style={{ width: `${xpProgress}%` }} />
                     </div>
                 </div>
-                <button className="logout-btn" onClick={handleLogout}>🚪 Sign Out</button>
+            <button className="logout-btn" onClick={handleLogout}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Sign Out
+            </button>
             </div>
         </aside>
     )
